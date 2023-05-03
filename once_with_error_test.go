@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestRun(t *testing.T) {
+func TestRunWithError_success(t *testing.T) {
 	var i atomic.Int64
-	f := New(func() (int64, error) {
+	f := WrapWithError(func() (int64, error) {
 		return i.Add(1), nil
 	})
 
@@ -26,9 +26,9 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestRunError(t *testing.T) {
+func TestRunWithError_error(t *testing.T) {
 	var i atomic.Int64
-	f := New(func() (int64, error) {
+	f := WrapWithError(func() (int64, error) {
 		return i.Add(1), fmt.Errorf("error")
 	})
 

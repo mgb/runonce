@@ -2,25 +2,30 @@ package runonce
 
 import "sync"
 
-// New creates a Runner that runs the given function once.
-func New[T any](f func() (T, error)) func() (T, error) {
+// Runner is a function that returns a value and an error.
+type RunWithError[T any] func() (T, error)
+
+// WrapWithError wraps a function that returns a value and an error, and
+// ensures that the function is only called once and all callers see the same
+// values
+func WrapWithError[T any](f RunWithError[T]) RunWithError[T] {
 	r := runner[T]{
 		f: f,
 	}
-	return r.Run
+	return r.run
 }
 
 type runner[T any] struct {
 	// f is:
 	//  - called once (protected by sync.Once)
 	//  - writes the results to t/err
-	f   func() (T, error)
+	f   RunWithError[T]
 	t   T
 	err error
 	sync.Once
 }
 
-func (r *runner[T]) Run() (T, error) {
+func (r *runner[T]) run() (T, error) {
 	r.Once.Do(func() {
 		r.t, r.err = r.f()
 	})
