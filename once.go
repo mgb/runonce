@@ -2,40 +2,30 @@ package runonce
 
 import "sync"
 
-type F[T any] func() (T, error)
-
-type Runner[T any] interface {
-	Run() (T, error)
-}
-
-func New[T any](f func() (T, error)) Runner[T] {
-	return &runner[T]{
-		f:    f,
-		done: make(chan struct{}),
+// New creates a Runner that runs the given function once.
+func New[T any](f func() (T, error)) func() (T, error) {
+	r := runner[T]{
+		f: f,
 	}
+	return r.Run
 }
 
 type runner[T any] struct {
-	f    func() (T, error)
-	done chan struct{}
-	sync.Once
-
+	// f is:
+	//  - called once (protected by sync.Once)
+	//  - writes the results to t/err
+	f   func() (T, error)
 	t   T
 	err error
-	sync.RWMutex
+	sync.Once
 }
 
 func (r *runner[T]) Run() (T, error) {
 	r.Once.Do(func() {
-		r.Lock()
-		defer r.Unlock()
-
 		r.t, r.err = r.f()
-		close(r.done)
 	})
 
-	<-r.done
-	r.RLock()
-	defer r.RUnlock()
+	// sync.Once ensures that all values have been successfully written before
+	// returning, and all go routines will see the same values.
 	return r.t, r.err
 }
